@@ -32,8 +32,7 @@ class SequentialAdjustmentCriterion(SequentialAdjustment):
         return next_order
 
     def set_next(self) -> bool:
-        next_order = self.__next()
-        if next_order:
+        if next_order := self.__next():
             self.X.set_partition(next_order)
             return True
         else :
@@ -49,8 +48,7 @@ class SequentialAdjustmentCriterion(SequentialAdjustment):
     def condition2(self, i:int) -> bool:    
         return bool(self.psbd(i).independent(self.X[i],self.Y.geq(i), self.H(i-1) | self.Z[i]))
     
-    def criteria(self):
-        
+    def criteria(self) -> bool:
         for i in range(1,self.m+1):
             if not self.condition1(i):
                 print(f"condition1 (z | dpcp) is violated at i={i}")
@@ -84,7 +82,7 @@ class SequentialAdjustmentCriterion(SequentialAdjustment):
             minz.append(wrap(Zimin))
             
         for i in range(1,self.m+1):
-            self.set_covariate(i,minz[i])
+            self.set_covariate(i, minz[i])
         
     def to_ac(self) -> AdjustmentCriterion:
         subZ = fzset_union([self.Z[i] for i in range(1,self.m+1)])

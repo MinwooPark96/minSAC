@@ -24,6 +24,7 @@ G_1 = CD(
 
 if __name__ == '__main__':
     xs,ys,zs = {'X1','X2'},{'Y1','Y2'},{'Za','Zb','Zc','Zd'}
+    
     msbd = mSBD(G_1,xs,ys,zs)
     msbd.set_covariate(1,{'Za','Zb'})
     msbd.set_covariate(2,{'Zc','Zd'})
@@ -45,9 +46,6 @@ if __name__ == '__main__':
 
     print('-------------------')
 
-    # msbd.formula()
-
-    # (mSBD -> SAC)
     sac = SAC(G_1,xs,ys,zs)
 
     sac.set_covariate(1,{'Za','Zb'})

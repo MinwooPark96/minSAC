@@ -11,3 +11,8 @@ class SequentialAdjustment(ABC):
     def H(self, i: int) -> frozenset[str]:
         return self.X.leq(i) | self.Y.leq(i) | self.Z.leq(i)
     
+    def causalEffect(self):
+        raise NotImplementedError
+            
+    def formula(self): 
+        raise NotImplementedError
