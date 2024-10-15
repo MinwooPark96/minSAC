@@ -9,6 +9,5 @@ This python package is for the paper titled "Complete Graphical Criterion for Se
 conda create -n [env_name] python>=3.11
 conda activate [env_name]
 pip install -r requirements.txt
-pip install -e .
 ```
 
