@@ -1,0 +1,13 @@
+# numpy
+scipy
+tqdm
+matplotlib
+networkx>=3.3
+lark-parser
+pydot
+rpy2
+joblib
+pytest
+jupyter
+colorama
+mypy
