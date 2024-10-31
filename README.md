@@ -11,3 +11,6 @@ conda activate [env_name]
 pip install -r requirements.txt
 ```
 
+### Reference
+
+https://github.com/sanghack81/SCMMAB-NIPS2018
