@@ -10,3 +10,5 @@ conda create -n [env_name] python>=3.11
 conda activate [env_name]
 pip install -r requirements.txt
 ```
+
+This code is built on top of the structural causal bandit library by [Sanghack Lee](https://github.com/sanghack81/SCMMAB-NIPS2018).
