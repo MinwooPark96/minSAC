@@ -3,7 +3,6 @@ from .utils import fzset_union, wrap
 from typing import Iterable, AbstractSet, Union
 from abc import ABC
 import networkx as nx
-import functools
 
 class Orderedset(AbstractSet, ABC):
     
@@ -54,9 +53,9 @@ class Orderedset(AbstractSet, ABC):
     def __and__(self, other):
         # if isinstance(other,Orderedset):
         if hasattr(other,'V'):
-            return self.V | other.V
+            return self.V & other.V
         else :
-            return self.V | wrap(other)
+            return self.V & wrap(other)
     
     def __eq__(self, other):
         return self.V == other.V
@@ -68,30 +67,42 @@ class OrderedX(Orderedset):
                  xs: Iterable[str]):
         
         self.G = G
-        self.V= wrap(xs)
-        self.get_all_causal_order = functools.lru_cache()(self.get_all_causal_order)
-        self.P= self.partition()
+        self.V = wrap(xs)
+        if not self.V or not self.V <= G.V:
+            raise ValueError("Treatments must be a nonempty subset of graph vertices")
+        directed = nx.DiGraph()
+        directed.add_nodes_from(sorted(G.V))
+        directed.add_edges_from(G.edges)
+        if not nx.is_directed_acyclic_graph(directed):
+            raise ValueError("The directed part of the causal graph must be acyclic")
         self.m = len(self.V)
+        # One deterministic order; do not enumerate all orders during construction.
+        order = [v for v in nx.lexicographical_topological_sort(directed) if v in self.V]
+        self.P = [wrap(v) for v in order]
         
     def get_all_causal_order(self) -> list[list[str]]: 
-        LP = self.G.LP(self.V)
-        gg = nx.DiGraph(LP.edges)
-        gg.add_nodes_from(self.V)
-        top_to_bottom = list(nx.all_topological_sorts(gg))
-        return top_to_bottom
+        """Explicitly enumerate all orders (potentially factorial output)."""
+        return list(self.iter_causal_orders())
+
+    def iter_causal_orders(self):
+        """Lazily enumerate orders respecting paths through other vertices."""
+        gg = nx.DiGraph()
+        gg.add_nodes_from(sorted(self.V))
+        for x in sorted(self.V):
+            gg.add_edges_from((x, y) for y in sorted((self.G.De(x) & self.V) - {x}))
+        return nx.all_topological_sorts(gg)
         
     def partition(self) -> list[frozenset[str]]:
-        result = list()
-        for x in self.get_all_causal_order()[0]:
-            if x in self.V:
-                result.append(wrap(x))
-        return result
+        return list(self.P)
     
     def set_partition(self, xs : Iterable[str]):
-        xs = wrap(xs)
-        assert xs == self.V
-        for i in range(0,self.m):
-            self.P[i] = wrap(xs[i])
+        xs = [xs] if isinstance(xs, str) else list(xs)
+        if len(xs) != self.m or frozenset(xs) != self.V:
+            raise ValueError("Treatment order must contain each treatment exactly once")
+        for i, x in enumerate(xs):
+            if self.G.De(x) & set(xs[:i]):
+                raise ValueError("Treatment order must respect directed ancestry")
+        self.P = [wrap(x) for x in xs]
 
 class OrderedY(Orderedset):        
     def __init__(self,
@@ -179,9 +190,16 @@ class Orderedsac(Orderedset):
         
     def set_partition(self,i: int, zi: Iterable[str]):
         zi = wrap(zi)
-        assert i > 0 and i <= self.m
-        assert all(z in self.V for z in zi)
-        self.P[i-1] = wrap(zi)
+        if not 1 <= i <= self.m:
+            raise ValueError("Covariate stage is outside the treatment order")
+        if not zi <= self.G.V - self.X.V:
+            raise ValueError("Covariates must be observed nontreatment vertices")
+        if zi & self.G.De(self.X.geq(i + 1)):
+            raise ValueError("Covariates cannot descend from a later treatment")
+        if any(zi & block for j, block in enumerate(self.P, 1) if j != i):
+            raise ValueError("Covariate blocks must be pairwise disjoint")
+        self.P[i-1] = zi
+        self.V = fzset_union(self.P)
     
     def partition(self) -> list[frozenset[str]]:
         pset = list()
@@ -189,7 +207,7 @@ class Orderedsac(Orderedset):
         for i in range(1,self.m+1):
             zi = list()
             for v in self.V:
-                if v in (Z - self.G.De(self.X.geq(i))): #search space
+                if v in (Z - self.G.De(self.X.geq(i+1))): # current descendants are allowed
                     zi.append(v)         
             if zi:
                 pset.append(wrap(zi))
